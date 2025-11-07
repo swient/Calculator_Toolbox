@@ -28,6 +28,7 @@ namespace CalculatorToolbox
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Calculator));
             tableLayoutPanel1 = new TableLayoutPanel();
             txtDisplay = new TextBox();
             tableLayoutPanel2 = new TableLayoutPanel();
@@ -573,7 +574,7 @@ namespace CalculatorToolbox
             btnUnitConverter.Padding = new Padding(20, 0, 0, 0);
             btnUnitConverter.Size = new Size(347, 64);
             btnUnitConverter.TabIndex = 3;
-            btnUnitConverter.Text = "單位轉換";
+            btnUnitConverter.Text = "單位換算";
             btnUnitConverter.TextAlign = ContentAlignment.MiddleLeft;
             btnUnitConverter.UseVisualStyleBackColor = true;
             btnUnitConverter.Click += BtnUnitConverter_Click;
@@ -585,6 +586,7 @@ namespace CalculatorToolbox
             ClientSize = new Size(478, 704);
             Controls.Add(tableLayoutPanel1);
             Controls.Add(menuPanel);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(500, 760);
             Name = "Calculator";
             Text = "計算機";
