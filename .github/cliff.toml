@@ -1,0 +1,92 @@
+# git-cliff ~ 設定檔
+# https://git-cliff.org/docs/configuration
+
+
+[changelog]
+# 用於每個發布版本渲染的 Tera 模板
+# 參見 https://keats.github.io/tera/docs/#introduction
+body = """
+{% if version %}\
+    ## {{ version | trim_start_matches(pat="v") }} ({{ timestamp | date(format="%Y-%m-%d") }})
+{% else %}\
+    ## [未發布]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits %}
+        - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+            {% if commit.breaking %}[**重大變更**] {% endif %}\
+            {{ commit.message | upper_first }} @{{ commit.author.name }}\
+    {% endfor %}
+{% endfor %}
+"""
+# 移除變更日誌內容中的前後空白
+trim = true
+# 即使沒有發布版本要處理也渲染內容
+render_always = true
+# 基於正則表達式的後處理器陣列，用於修改變更日誌
+postprocessors = [
+    # 將佔位符 <REPO> 替換為 URL
+    #{ pattern = '<REPO>', replace = "https://github.com/orhun/git-cliff" },
+]
+# 即使沒有發布版本要處理也渲染內容
+# render_always = true
+# 輸出檔案路徑
+# output = "test.md"
+
+[git]
+# 根據傳統提交規範解析提交
+# 參見 https://www.conventionalcommits.org
+conventional_commits = true
+# 排除不符合傳統提交規範的提交
+filter_unconventional = false
+# 要求所有提交都符合傳統規範
+# 優先於 filter_unconventional
+require_conventional = false
+# 在換行符處分割提交，將每一行視為單獨的提交
+split_commits = true
+# 基於正則表達式的解析器陣列，用於在進一步處理之前修改提交訊息
+commit_preprocessors = [
+    # 將問題編號替換為連結模板，以便在 `changelog.postprocessors` 中更新
+    #{ pattern = '\((\w+\s)?#([0-9]+)\)', replace = "([#${2}](<REPO>/issues/${2}))"},
+    # 使用 https://github.com/crate-ci/typos 檢查提交訊息的拼寫
+    # 如果拼寫不正確，將自動修正
+    #{ pattern = '.*', replace_command = 'typos --write-changes -' },
+]
+# 防止重大變更的提交被提交解析器排除
+protect_breaking_commits = false
+# 基於正則表達式的解析器陣列，用於從提交訊息中提取資料
+# 將提交分配到群組
+# 可選地設定提交的範圍，並可決定從進一步處理中排除提交
+commit_parsers = [
+    { message = "^feat", group = "<!-- 0 -->🚀 新功能" },
+    { message = "^fix", group = "<!-- 1 -->🐛 錯誤修復" },
+    { message = "^doc", group = "<!-- 3 -->📚 文件" },
+    { message = "^perf", group = "<!-- 4 -->⚡ 效能" },
+    { message = "^refactor", group = "<!-- 2 -->🚜 重構" },
+    { message = "^style", group = "<!-- 5 -->🎨 樣式" },
+    { message = "^test", group = "<!-- 6 -->🧪 測試" },
+    { message = "^chore\\(release\\): prepare for", skip = true },
+    { message = "^chore\\(deps.*\\)", skip = true },
+    { message = "^chore\\(pr\\)", skip = true },
+    { message = "^chore\\(pull\\)", skip = true },
+    { message = "^chore|^ci", group = "<!-- 7 -->⚙️ 雜項任務" },
+    { body = ".*security", group = "<!-- 8 -->🛡️ 安全性" },
+    { message = "^revert", group = "<!-- 9 -->◀️ 還原" },
+    { message = ".*", group = "<!-- 10 -->💼 其他" },
+]
+# 排除未被任何提交解析器匹配的提交
+filter_commits = false
+# 連結解析器陣列，用於提取外部參考並使用正則表達式將其轉換為 URL
+link_parsers = []
+# 僅包含屬於當前分支的標籤
+use_branch_tags = false
+# 以拓撲順序而非時間順序排列發布版本
+topo_order = false
+# 以拓撲順序而非時間順序排列發布版本
+topo_order_commits = true
+# 變更日誌中每個群組/發布版本內的提交順序
+# 允許值：newest（最新）、oldest（最舊）
+sort_commits = "oldest"
+# 處理子模組提交
+recurse_submodules = false

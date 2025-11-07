@@ -1,0 +1,156 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: set_tag
+        run: |
+          # 檢查標籤格式
+          if [[ $GITHUB_REF =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$ ]]; then
+            is_release=true
+            tag=${GITHUB_REF#refs/tags/}
+            echo "Release tag format is valid: $tag"
+          else
+            is_release=false
+            # 獲取最新的發布標籤
+            tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | awk '/tag_name/{print $4}' FS='["]')
+            if [[ ! $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$ ]]; then
+              echo "No valid release tag found, using v0.0.0"
+              tag="v0.0.0"
+            fi
+            tag="$tag-$(date '+%Y%m%d')-$(git rev-parse --short HEAD)"
+          fi
+
+          if [ "$is_release" != "true" ]; then
+            prefix=${tag%-*-*}
+            suffix=${tag#$prefix-}
+            tag="$prefix-ci.$suffix"
+          fi
+
+          # 檢查是否為預發布版本
+          is_prerelease=false
+          if [[ $tag =~ .*alpha.* || $tag =~ .*beta.* || $tag =~ .*rc.* || $tag =~ .*dev.* || $tag =~ .*-ci.* ]]; then
+            is_prerelease=true
+            echo "This is a pre-release version"
+          fi
+
+          echo tag=$tag | tee -a $GITHUB_OUTPUT
+          echo is_release=$is_release | tee -a $GITHUB_OUTPUT
+          echo is_prerelease=$is_prerelease | tee -a $GITHUB_OUTPUT
+    outputs:
+      tag: ${{ steps.set_tag.outputs.tag }}
+      is_release: ${{ steps.set_tag.outputs.is_release }}
+      is_prerelease: ${{ steps.set_tag.outputs.is_prerelease }}
+
+  build:
+    needs: meta
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Release]
+        runtime: [win-x64, win-x86, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration ${{ matrix.configuration }} --no-restore
+
+      - name: Publish
+        run: |
+          dotnet publish CalculatorToolbox/CalculatorToolbox.csproj `
+            --configuration ${{ matrix.configuration }} `
+            --runtime ${{ matrix.runtime }} `
+            --self-contained true `
+            --output ./publish/${{ matrix.runtime }} `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Create Archive
+        shell: pwsh
+        run: |
+          $archiveName = "CalculatorToolbox-${{ needs.meta.outputs.tag }}-${{ matrix.runtime }}.zip"
+          Compress-Archive -Path ./publish/${{ matrix.runtime }}/* -DestinationPath $archiveName
+          Write-Host "Created archive: $archiveName"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CalculatorToolbox-${{ matrix.runtime }}
+          path: CalculatorToolbox-${{ needs.meta.outputs.tag }}-${{ matrix.runtime }}.zip
+          retention-days: 7
+
+  changelog:
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: .github/cliff.toml
+          args: --verbose --latest --output CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: CHANGELOG.md
+          retention-days: 7
+
+  release:
+    needs: [meta, build, changelog]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: Release ${{ needs.meta.outputs.tag }}
+          body_path: artifacts/changelog/CHANGELOG.md
+          prerelease: ${{ needs.meta.outputs.is_prerelease == 'true' }}
+          files: |
+            artifacts/CalculatorToolbox-win-x64/*.zip
+            artifacts/CalculatorToolbox-win-x86/*.zip
+            artifacts/CalculatorToolbox-win-arm64/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
