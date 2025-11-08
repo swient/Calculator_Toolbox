@@ -3,13 +3,13 @@ using System.Diagnostics.Metrics;
 
 namespace CalculatorToolbox
 {
-    public partial class Calculator : Form
+    public partial class MainForm : Form
     {
         private readonly CalculatorEngine engine = new();
         private string expression = "";
         private string userInput = "0";
 
-        public Calculator()
+        public MainForm()
         {
             InitializeComponent();
             menuPanel.Width = (int)(this.Width * 0.7);
@@ -25,6 +25,7 @@ namespace CalculatorToolbox
 
         private void ShowError(string error)
         {
+            expression = txtExpression.Text;
             userInput = "0";
             engine.CurrentValue = 0;
             txtDisplay.Text = error;
@@ -86,6 +87,10 @@ namespace CalculatorToolbox
                 UpdateCurrentValue();
                 UpdateDisplay();
             }
+            catch (CalculatorException ex)
+            {
+                ShowError(ex.Message);
+            }
             catch (Exception)
             {
                 ShowError("錯誤");
@@ -108,6 +113,10 @@ namespace CalculatorToolbox
                     expression = engine.CurrentValue + " =";
                 }
                 UpdateDisplay();
+            }
+            catch (CalculatorException ex)
+            {
+                ShowError(ex.Message);
             }
             catch (Exception)
             {

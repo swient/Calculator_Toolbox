@@ -1,6 +1,6 @@
 namespace CalculatorToolbox
 {
-    partial class Calculator
+    partial class MainForm
     {
         /// <summary>
         ///  Required designer variable.
@@ -28,7 +28,7 @@ namespace CalculatorToolbox
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Calculator));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             tableLayoutPanel1 = new TableLayoutPanel();
             txtDisplay = new TextBox();
             tableLayoutPanel2 = new TableLayoutPanel();
@@ -579,7 +579,7 @@ namespace CalculatorToolbox
             btnUnitConverter.UseVisualStyleBackColor = true;
             btnUnitConverter.Click += BtnUnitConverter_Click;
             // 
-            // Calculator
+            // MainForm
             // 
             AutoScaleDimensions = new SizeF(11F, 23F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -588,7 +588,7 @@ namespace CalculatorToolbox
             Controls.Add(menuPanel);
             Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(500, 760);
-            Name = "Calculator";
+            Name = "MainForm";
             Text = "計算機";
             Resize += Calculator_Resize;
             tableLayoutPanel1.ResumeLayout(false);

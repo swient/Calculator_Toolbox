@@ -52,6 +52,8 @@ commit_preprocessors = [
     # 使用 https://github.com/crate-ci/typos 檢查提交訊息的拼寫
     # 如果拼寫不正確，將自動修正
     #{ pattern = '.*', replace_command = 'typos --write-changes -' },
+    # 移除以 - 開頭的子項目行
+    { pattern = '\n-.*', replace = "" },
 ]
 # 防止重大變更的提交被提交解析器排除
 protect_breaking_commits = false
